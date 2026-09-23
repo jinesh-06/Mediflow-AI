@@ -25,7 +25,25 @@ Write-Host "  - Backend REST API:        http://localhost:8000" -ForegroundColor
 Write-Host "  - OpenAPI Interactive Docs:http://localhost:8000/docs" -ForegroundColor White
 Write-Host "`nPress Ctrl+C or run 'Stop-Job *; Remove-Job *' to terminate demo processes.`n" -ForegroundColor Yellow
 
-# Keep alive loop
-while ($true) {
-    Start-Sleep -Seconds 5
+try {
+    # Keep alive loop and monitor process health
+    while ($true) {
+        if ($BackendJob.State -ne 'Running') {
+            Write-Host "`nBackend process terminated." -ForegroundColor Red
+            Receive-Job -Job $BackendJob
+            break
+        }
+        if ($FrontendJob.State -ne 'Running') {
+            Write-Host "`nFrontend process terminated." -ForegroundColor Red
+            Receive-Job -Job $FrontendJob
+            break
+        }
+        Start-Sleep -Seconds 3
+    }
+}
+finally {
+    Write-Host "`nCleaning up background processes..." -ForegroundColor Yellow
+    Stop-Job $BackendJob, $FrontendJob -ErrorAction SilentlyContinue
+    Remove-Job $BackendJob, $FrontendJob -ErrorAction SilentlyContinue
+    Write-Host "ResiliHealth demo background processes stopped.`n" -ForegroundColor Green
 }
